@@ -20,6 +20,7 @@ namespace LogViewer.Server
     public class LogParser : ILogParser, IDisposable
     {
         private List<LogEvent> _logItems;
+        private List<string> _propertyNames;
         private readonly IHubContext<LogHub> _hubContext;
         public string LogFilePath { get; set; }
         public bool LogIsOpen { get; set; }
@@ -34,6 +35,7 @@ namespace LogViewer.Server
         public LogParser(IHubContext<LogHub> hubContext)
         {
             _logItems = new List<LogEvent>();
+            _propertyNames = new List<string>();
             _hubContext = hubContext;
 
             LogFilePath = string.Empty;
@@ -51,6 +53,7 @@ namespace LogViewer.Server
         public List<LogEvent> ReadLogs(string filePath, Logger? logger = null)
         {
             var logItems = new List<LogEvent>();
+            var propertyNames = new HashSet<string>();
 
             using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -74,12 +77,18 @@ namespace LogViewer.Server
                             }
 
                             logItems.Add(evt);
+
+                            foreach (var propertyName in evt.Properties.Keys)
+                            {
+                                propertyNames.Add(propertyName);
+                            }
                         }
                     }
                 }
             }
 
             _logItems = logItems;
+            _propertyNames = propertyNames.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
             LogFilePath = filePath;
             LogIsOpen = true;
             
@@ -102,6 +111,11 @@ namespace LogViewer.Server
                 return fs.Length != _lastReadLength
                     || File.GetLastWriteTimeUtc(LogFilePath) != _lastReadWriteTimeUtc;
             }
+        }
+
+        public List<string> PropertyNames()
+        {
+            return _propertyNames;
         }
 
         public LogLevelCounts TotalCounts()

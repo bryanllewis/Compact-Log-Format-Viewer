@@ -1,6 +1,8 @@
 {
     "appId": "com.warrenbuckley.compact.logviewer",
-    "productName": "Compact Log Viewer",
+    "productName": "Trimark Compact Log Viewer",
+    // No publishing or auto-update feed
+    "publish": null,
     "directories": {
         "output": "../output"
     },
@@ -21,8 +23,7 @@
             "nsis",
             "appx"
         ],
-        "icon": "logo.png",
-        "publish": ["github"]
+        "icon": "logo.png"
     },
     "mac": {
         "category": "public.app-category.developer-tools",
@@ -40,14 +41,14 @@
         "deleteAppDataOnUninstall": true,
         "createDesktopShortcut": true,
         "createStartMenuShortcut": true,
-        "shortcutName": "Compact Log Viewer",
-        "artifactName": "Compact.Log.Viewer.Setup.${version}.${ext}",
-        "uninstallDisplayName": "Compact Log Viewer (${version})"
+        "shortcutName": "Trimark Compact Log Viewer",
+        "artifactName": "Trimark.Compact.Log.Viewer.Setup.${version}.${ext}",
+        "uninstallDisplayName": "Trimark Compact Log Viewer (${version})"
     },
     "appx": {
         "applicationId": "Compact.Log.Viewer",
         "backgroundColor": "#3544b1",
-        "displayName": "Compact Log Viewer",
+        "displayName": "Trimark Compact Log Viewer",
         "identityName": "64819WarrenBuckley.CompactLogFormatViewer",
         "publisher": "CN=4629CEC3-93A2-4080-86C0-63487B897B1F",
         "publisherDisplayName": "Warren Buckley"

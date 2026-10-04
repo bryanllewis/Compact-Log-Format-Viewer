@@ -1,10 +1,9 @@
-import { app, BrowserWindow, Menu, MenuItem, shell } from "electron";
+import { app, BrowserWindow, Menu, shell } from "electron";
 import * as file from "./file";
 import * as webapi from "./webapi";
-import * as updater from "./app-updater";
 
 app.setAboutPanelOptions({
-    applicationName: "Compact Log Viewer",
+    applicationName: "Compact Log Viewer\n\nTrimark customization by Bryan Lewis",
     version: app.getVersion(),
     website: "https://github.com/warrenbuckley/Compact-Log-Format-Viewer",
     authors: ["Warren Buckley"]
@@ -96,9 +95,9 @@ const template: Electron.MenuItemConstructorOptions[] = [
     role: "help",
     id: "help",
     submenu: [{
-        label: "Github Repo",
+        label: "Github Repo (Trimark fork)",
         click() {
-            shell.openExternal("https://github.com/warrenbuckley/Compact-Log-Format-Viewer");
+            shell.openExternal("https://github.com/bryanllewis/Compact-Log-Format-Viewer");
         },
     },
     {
@@ -169,17 +168,6 @@ if (process.platform === 'darwin') {
 }
 
 const menu = Menu.buildFromTemplate(template);
-
-const isWindowsStore = process.windowsStore;
-if(!isWindowsStore){
-    let helpMenu = menu.getMenuItemById("help");
-    helpMenu.submenu.append(new MenuItem({
-        label: "Check for Updates",
-        click: (menuItem) => {
-            updater.checkForUpdates(menuItem);
-        }
-    }));
-}
 
 Menu.setApplicationMenu(menu);
 

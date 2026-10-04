@@ -15,6 +15,8 @@ namespace LogViewer.Server
 
         bool HasFileChanged();
 
+        List<string> PropertyNames();
+
         LogLevelCounts TotalCounts();
 
         int TotalErrors();

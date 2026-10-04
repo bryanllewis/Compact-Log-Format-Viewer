@@ -180,6 +180,70 @@ namespace LogViewer.Server.Tests
             }
         }
 
+        [Test]
+        public void Logs_Contain_Property_Names()
+        {
+            var mockedHub = new Mock<IHubContext<LogHub>>();
+            var parser = new LogParser(mockedHub.Object);
+
+            var logFile = Path.GetTempFileName();
+            File.WriteAllLines(logFile, new[]
+            {
+                "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"HTTP {RequestMethod} {RequestPath}\",\"RequestMethod\":\"POST\",\"RequestPath\":\"/api/values\"}",
+                "{\"@t\":\"2026-10-04T17:48:59.203+00:00\",\"@mt\":\"Hello {Name}\",\"Name\":\"World\",\"requestId\":\"abc\"}",
+            });
+
+            try
+            {
+                parser.ReadLogs(logFile);
+
+                // Unique & sorted case insensitively
+                CollectionAssert.AreEqual(new[] { "Name", "requestId", "RequestMethod", "RequestPath" }, parser.PropertyNames());
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
+        // The expression shapes the client builds when a property value is clicked
+        [TestCase("Name = 'World'", 1)]
+        [TestCase("Count = 3", 1)]
+        [TestCase("Enabled = true", 1)]
+        [TestCase("Missing is null", 1)]
+        [TestCase("User.Address.City = 'Leeds'", 1)]
+        [TestCase("Tags[?] = 'beta'", 1)]
+        [TestCase("Orders[?].Id = 7", 1)]
+        [TestCase("@p['Odd Name'] = 'it''s'", 1)]
+        [TestCase("@MessageTemplate = 'Hello {Name}'", 2)]
+        public void Logs_Can_Query_Clicked_Property_Values(string queryToVerify, int expectedCount)
+        {
+            var mockedHub = new Mock<IHubContext<LogHub>>();
+            var parser = new LogParser(mockedHub.Object);
+
+            var logFile = Path.GetTempFileName();
+            File.WriteAllLines(logFile, new[]
+            {
+                "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"Hello {Name}\",\"Name\":\"World\",\"Count\":3,\"Enabled\":true,\"Missing\":null,\"User\":{\"Address\":{\"City\":\"Leeds\"}},\"Tags\":[\"alpha\",\"beta\"],\"Orders\":[{\"Id\":7}],\"Odd Name\":\"it's\"}",
+                "{\"@t\":\"2026-10-04T17:48:59.203+00:00\",\"@mt\":\"Hello {Name}\",\"Name\":\"There\",\"Count\":4,\"Enabled\":false,\"Missing\":\"x\",\"User\":{\"Address\":{\"City\":\"York\"}},\"Tags\":[\"alpha\"],\"Orders\":[{\"Id\":8}],\"Odd Name\":\"other\"}",
+            });
+
+            try
+            {
+                parser.ReadLogs(logFile);
+
+                var testQuery = parser.Search(pageNumber: 1, filterExpression: queryToVerify);
+
+                Assert.AreEqual(expectedCount, testQuery.Logs.TotalItems);
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
         [TestCase("RequestMethod = 'POST'", 2)]
         [TestCase("RequestMethod=\"POST\"", 2)]
         [TestCase("RequestMethod = \"GET\"", 1)]

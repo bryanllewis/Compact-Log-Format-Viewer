@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using LogViewer.Server.Extensions;
 using LogViewer.Server.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -74,6 +75,15 @@ namespace LogViewer.Server.Controllers
         public ActionResult<bool> HasChanged()
         {
             return _logParser.HasFileChanged();
+        }
+
+        [HttpGet("properties")]
+        public ActionResult<List<string>> PropertyNames()
+        {
+            if (_logParser.LogIsOpen == false)
+                return BadRequest("No logfile has been opened yet");
+
+            return _logParser.PropertyNames();
         }
 
         [HttpGet("totals")]

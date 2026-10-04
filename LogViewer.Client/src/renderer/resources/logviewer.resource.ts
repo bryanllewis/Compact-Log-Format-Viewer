@@ -13,6 +13,10 @@ function logViewerResource($http: IHttpService) {
             return $http.get(`${serverApiDomain}/totals`);
         },
 
+        getPropertyNames() {
+            return $http.get(`${serverApiDomain}/properties`);
+        },
+
         hasFileChanged() {
             return $http.get(`${serverApiDomain}/haschanged`);
         },

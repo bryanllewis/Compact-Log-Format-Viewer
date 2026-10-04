@@ -16,6 +16,14 @@ logViewerApp.controller("LogViewerController", ["$scope", "$interval", "logViewe
     vm.chartColors = [ "#6c757d", "#20c997", "#17a2b8", "#ffc107", "#fd7e14", "#dc3545" ];
     vm.logs = {};
     vm.loadinglogs = false;
+    vm.propertyNames = [];
+
+    // Property names in the open log file, offered as suggestions in the search box
+    const loadPropertyNames = () => {
+        logViewerResource.getPropertyNames().then((response) => {
+            vm.propertyNames = response.data;
+        });
+    };
 
     vm.logOptions = {};
     vm.logOptions.filterExpression = "";
@@ -48,6 +56,7 @@ logViewerApp.controller("LogViewerController", ["$scope", "$interval", "logViewe
                         setLogTypes(totals.data);
                     });
                     vm.performSearch();
+                    loadPropertyNames();
                 });
             })
             .catch((err) => {
@@ -120,6 +129,7 @@ logViewerApp.controller("LogViewerController", ["$scope", "$interval", "logViewe
 
     ipcRenderer.on("logviewer.file-opened", () => {
         vm.fileOpen = true;
+        loadPropertyNames();
         $scope.$applyAsync();
     });
 
@@ -130,6 +140,7 @@ logViewerApp.controller("LogViewerController", ["$scope", "$interval", "logViewe
         vm.logTypes = {};
         vm.chartData = [];
         vm.logs = {};
+        vm.propertyNames = [];
 
         vm.logOptions = {};
         vm.logOptions.filterExpression = "";

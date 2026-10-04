@@ -8,32 +8,39 @@
                     <tr>
                         <th scope="col">Level</th>
                         <th scope="col">Count</th>
+                        <th scope="col" class="text-end">%</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr ng-click="vm.logTypeClick('Fatal')">
                         <td><span class="square fatal"></span> Fatal</td>
                         <td>{{ vm.logtypes.fatal }}</td>
+                        <td class="text-end">{{ vm.percent(vm.logtypes.fatal) | number:0 }}%</td>
                     </tr>
                     <tr ng-click="vm.logTypeClick('Error')">
                         <td><span class="square error"></span> Error</td>
                         <td>{{ vm.logtypes.error }}</td>
+                        <td class="text-end">{{ vm.percent(vm.logtypes.error) | number:0 }}%</td>
                     </tr>		
                     <tr ng-click="vm.logTypeClick('Warning')">
                         <td><span class="square warning"></span> Warning</td>
                         <td>{{ vm.logtypes.warning }}</td>
+                        <td class="text-end">{{ vm.percent(vm.logtypes.warning) | number:0 }}%</td>
                     </tr>		
                     <tr ng-click="vm.logTypeClick('Information')">
                         <td><span class="square information"></span> Information</td>
                         <td>{{ vm.logtypes.information }}</td>
+                        <td class="text-end">{{ vm.percent(vm.logtypes.information) | number:0 }}%</td>
                     </tr>					
                     <tr ng-click="vm.logTypeClick('Debug')">
                         <td><span class="square debug"></span> Debug</td>
                         <td>{{ vm.logtypes.debug }}</td>
+                        <td class="text-end">{{ vm.percent(vm.logtypes.debug) | number:0 }}%</td>
                     </tr>
                     <tr ng-click="vm.logTypeClick('Verbose')">
                         <td><span class="square verbose"></span> Verbose</td>
                         <td>{{ vm.logtypes.verbose }}</td>
+                        <td class="text-end">{{ vm.percent(vm.logtypes.verbose) | number:0 }}%</td>
                     </tr>
                 </tbody>
             </table>
