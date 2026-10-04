@@ -124,5 +124,160 @@ namespace LogViewer.Server.Tests
             Assert.AreEqual(expectedCount, testQuery.Logs.TotalItems);
         }
 
+        [Test]
+        public void Rendered_Message_Does_Not_Quote_String_Values()
+        {
+            var mockedHub = new Mock<IHubContext<LogHub>>();
+            var parser = new LogParser(mockedHub.Object);
+
+            var logFile = Path.GetTempFileName();
+            File.WriteAllText(logFile, "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"HTTP {RequestMethod} {RequestPath}{QueryString} responded {StatusCode} in {Elapsed:0.0} ms\",\"@r\":[\"0.4\"],\"@l\":\"Information\",\"QueryString\":\"\",\"RequestMethod\":\"POST\",\"RequestPath\":\"/api/values\",\"StatusCode\":200,\"Elapsed\":0.398}");
+
+            try
+            {
+                parser.ReadLogs(logFile);
+
+                var log = parser.Search().Logs.Items.Single();
+
+                Assert.AreEqual("HTTP POST /api/values responded 200 in 0.4 ms", log.RenderedMessage);
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
+        [Test]
+        public void HasFileChanged_Detects_Appended_Log_Entries()
+        {
+            // Mock the hub fully, as the FileSystemWatcher will notify Clients.All when the file is appended to
+            var mockedHub = new Mock<IHubContext<LogHub>> { DefaultValue = DefaultValue.Mock };
+            var parser = new LogParser(mockedHub.Object);
+
+            const string logLine = "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"Hello {Name}\",\"@l\":\"Information\",\"Name\":\"World\"}\n";
+            var logFile = Path.GetTempFileName();
+            File.WriteAllText(logFile, logLine);
+
+            try
+            {
+                Assert.IsFalse(parser.HasFileChanged(), "No file has been opened yet");
+
+                parser.ReadLogs(logFile);
+                Assert.IsFalse(parser.HasFileChanged(), "File has not changed since it was read");
+
+                File.AppendAllText(logFile, logLine);
+                Assert.IsTrue(parser.HasFileChanged(), "File has new entries appended");
+
+                parser.ReadLogs(logFile);
+                Assert.IsFalse(parser.HasFileChanged(), "File has been re-read");
+                Assert.AreEqual(2, parser.Search().Logs.TotalItems);
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
+        [Test]
+        public void Logs_Contain_Property_Names()
+        {
+            var mockedHub = new Mock<IHubContext<LogHub>>();
+            var parser = new LogParser(mockedHub.Object);
+
+            var logFile = Path.GetTempFileName();
+            File.WriteAllLines(logFile, new[]
+            {
+                "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"HTTP {RequestMethod} {RequestPath}\",\"RequestMethod\":\"POST\",\"RequestPath\":\"/api/values\"}",
+                "{\"@t\":\"2026-10-04T17:48:59.203+00:00\",\"@mt\":\"Hello {Name}\",\"Name\":\"World\",\"requestId\":\"abc\"}",
+            });
+
+            try
+            {
+                parser.ReadLogs(logFile);
+
+                // Unique & sorted case insensitively
+                CollectionAssert.AreEqual(new[] { "Name", "requestId", "RequestMethod", "RequestPath" }, parser.PropertyNames());
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
+        // The expression shapes the client builds when a property value is clicked
+        [TestCase("Name = 'World'", 1)]
+        [TestCase("Count = 3", 1)]
+        [TestCase("Enabled = true", 1)]
+        [TestCase("Missing is null", 1)]
+        [TestCase("User.Address.City = 'Leeds'", 1)]
+        [TestCase("Tags[?] = 'beta'", 1)]
+        [TestCase("Orders[?].Id = 7", 1)]
+        [TestCase("@p['Odd Name'] = 'it''s'", 1)]
+        [TestCase("@MessageTemplate = 'Hello {Name}'", 2)]
+        public void Logs_Can_Query_Clicked_Property_Values(string queryToVerify, int expectedCount)
+        {
+            var mockedHub = new Mock<IHubContext<LogHub>>();
+            var parser = new LogParser(mockedHub.Object);
+
+            var logFile = Path.GetTempFileName();
+            File.WriteAllLines(logFile, new[]
+            {
+                "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"Hello {Name}\",\"Name\":\"World\",\"Count\":3,\"Enabled\":true,\"Missing\":null,\"User\":{\"Address\":{\"City\":\"Leeds\"}},\"Tags\":[\"alpha\",\"beta\"],\"Orders\":[{\"Id\":7}],\"Odd Name\":\"it's\"}",
+                "{\"@t\":\"2026-10-04T17:48:59.203+00:00\",\"@mt\":\"Hello {Name}\",\"Name\":\"There\",\"Count\":4,\"Enabled\":false,\"Missing\":\"x\",\"User\":{\"Address\":{\"City\":\"York\"}},\"Tags\":[\"alpha\"],\"Orders\":[{\"Id\":8}],\"Odd Name\":\"other\"}",
+            });
+
+            try
+            {
+                parser.ReadLogs(logFile);
+
+                var testQuery = parser.Search(pageNumber: 1, filterExpression: queryToVerify);
+
+                Assert.AreEqual(expectedCount, testQuery.Logs.TotalItems);
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
+        [TestCase("RequestMethod = 'POST'", 2)]
+        [TestCase("RequestMethod=\"POST\"", 2)]
+        [TestCase("RequestMethod = \"GET\"", 1)]
+        [TestCase("RequestMethod = \"POST\" and RequestPath like '%values%'", 1)]
+        [TestCase("RequestPath = \"/api/it's\"", 1)]
+        [TestCase("RequestPath = \"/api/say \"\"hi\"\"\"", 1)]
+        [TestCase("RequestPath like '%\"%'", 1)]
+        public void Logs_Can_Query_With_Double_Quoted_Strings(string queryToVerify, int expectedCount)
+        {
+            var mockedHub = new Mock<IHubContext<LogHub>>();
+            var parser = new LogParser(mockedHub.Object);
+
+            var logFile = Path.GetTempFileName();
+            File.WriteAllLines(logFile, new[]
+            {
+                "{\"@t\":\"2026-10-04T17:48:58.203+00:00\",\"@mt\":\"HTTP {RequestMethod} {RequestPath}\",\"RequestMethod\":\"POST\",\"RequestPath\":\"/api/values\"}",
+                "{\"@t\":\"2026-10-04T17:48:59.203+00:00\",\"@mt\":\"HTTP {RequestMethod} {RequestPath}\",\"RequestMethod\":\"POST\",\"RequestPath\":\"/api/it's\"}",
+                "{\"@t\":\"2026-10-04T17:49:00.203+00:00\",\"@mt\":\"HTTP {RequestMethod} {RequestPath}\",\"RequestMethod\":\"GET\",\"RequestPath\":\"/api/say \\\"hi\\\"\"}",
+            });
+
+            try
+            {
+                parser.ReadLogs(logFile);
+
+                var testQuery = parser.Search(pageNumber: 1, filterExpression: queryToVerify);
+
+                Assert.AreEqual(expectedCount, testQuery.Logs.TotalItems);
+            }
+            finally
+            {
+                parser.Dispose();
+                File.Delete(logFile);
+            }
+        }
+
     }
 }

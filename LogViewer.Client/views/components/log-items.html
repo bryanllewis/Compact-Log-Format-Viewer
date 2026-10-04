@@ -3,12 +3,12 @@
         <tbody>
             <tr ng-if="val.properties" ng-repeat="prop in val.properties">
                 <th>{{prop.name}}</th>
-                <td ng-if="prop.value.value !== undefined">{{prop.value.value}}</td>
-                <td ng-if="prop.value.properties || prop.value.elements" ng-init="val = prop.value" ng-include="'nestedTable'"></td>
+                <td ng-if="prop.value.value !== undefined"><a href="" class="property-link" ng-click="vm.findItem(vm.propertyPath(path, prop.name), prop.value.value)" title="Search for logs with this value">{{prop.value.value}}</a></td>
+                <td ng-if="prop.value.properties || prop.value.elements" ng-init="val = prop.value; path = vm.propertyPath(path, prop.name)" ng-include="'nestedTable'"></td>
             </tr>
             <tr ng-if="val.elements" ng-repeat="element in val.elements">
-                <td ng-if="element.value !== undefined">{{element.value}}</td>
-                <td ng-if="element.properties || element.elements" ng-init="val = element" ng-include="'nestedTable'" ></td>
+                <td ng-if="element.value !== undefined"><a href="" class="property-link" ng-click="vm.findItem(path + '[?]', element.value)" title="Search for logs with this value">{{element.value}}</a></td>
+                <td ng-if="element.properties || element.elements" ng-init="val = element; path = path + '[?]'" ng-include="'nestedTable'" ></td>
             </tr>
         </tbody>
     </table>
@@ -38,13 +38,10 @@
                 </tr>
                 <tr ng-repeat-end="" ng-if="log.open" class="details">
                     <td colspan="3">
-
                         <div ng-if="log.exception" class="exception">
                             <h3>Exception</h3>
                             <p>{{ log.exception }}</p>
                         </div>
-
-                        <h3>Properties</h3>
                         <table class="table properties">
                             <tbody>
                                 <tr>
@@ -53,19 +50,13 @@
                                 </tr>
                                 <tr>
                                     <th>@MessageTemplate</th>
-                                    <td>{{ log.messageTemplateText }}</td>
+                                    <td><a href="" class="property-link" ng-click="vm.findItem('@MessageTemplate', log.messageTemplateText)" title="Search for logs with this value">{{log.messageTemplateText}}</a></td>
                                 </tr>
-                                <tr ng-repeat="(key, val) in log.properties">
+                                <tr ng-repeat="key in vm.sortedPropertyNames(log) track by key" ng-init="val = log.properties[key]">
                                     <th>{{key}}</th>
-                                    <td ng-switch on="key">
-                                        <a ng-switch-when="HttpRequestNumber" ng-click="vm.findItem(key, val.value)" title="Find Logs with Request ID" class="btn btn-primary">{{val.value}}</a>
-                                        <a ng-switch-when="SourceContext" ng-click="vm.findItem(key, val.value)" title="Find Logs with Namespace" class="btn btn-primary">{{val.value}}</a>
-                                        <a ng-switch-when="MachineName" ng-click="vm.findItem(key, val.value)" title="Find Logs with Machine Name" class="btn btn-primary">{{val.value}}</a>
-                                        <a ng-switch-when="RequestUrl" ng-href="{{val.value}}" target="_blank" rel="noopener" title="Open">{{val.value}}</a>
-                                        <div ng-switch-default>
-                                            <span ng-if="val.value !== undefined">{{val.value}}</span>
-                                            <div ng-if="val.properties || val.elements" ng-include="'nestedTable'"></div>
-                                        </div>
+                                    <td ng-init="path = vm.propertyPath(null, key)">
+                                        <span ng-if="val.value !== undefined"><a href="" class="property-link" ng-click="vm.findItem(path, val.value)" title="Search for logs with this value">{{val.value}}</a></span>
+                                        <div ng-if="val.properties || val.elements" ng-include="'nestedTable'"></div>
                                     </td>
                                 </tr>
                             </tbody>

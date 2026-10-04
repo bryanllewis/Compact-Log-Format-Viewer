@@ -1,9 +1,8 @@
 import angular from "angular";
 import { ipcRenderer } from "electron";
-import * as signalR from "@microsoft/signalr";
 
 const logViewerApp = angular.module("logViewerApp", ["chart.js", "logViewerApp.resources"]);
-logViewerApp.controller("LogViewerController", ["$scope", "logViewerResource", function($scope, logViewerResource) {
+logViewerApp.controller("LogViewerController", ["$scope", "$interval", "logViewerResource", function($scope, $interval, logViewerResource) {
     
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const vm = this;
@@ -17,42 +16,68 @@ logViewerApp.controller("LogViewerController", ["$scope", "logViewerResource", f
     vm.chartColors = [ "#6c757d", "#20c997", "#17a2b8", "#ffc107", "#fd7e14", "#dc3545" ];
     vm.logs = {};
     vm.loadinglogs = false;
+    vm.propertyNames = [];
+
+    // Property names in the open log file, offered as suggestions in the search box
+    const loadPropertyNames = () => {
+        logViewerResource.getPropertyNames().then((response) => {
+            vm.propertyNames = response.data;
+        });
+    };
 
     vm.logOptions = {};
     vm.logOptions.filterExpression = "";
     vm.logOptions.sortOrder = "Descending";
     vm.logOptions.pageNumber = 1;
+    vm.logOptions.autoRefresh = "0";
 
-    vm.fileHasUpdates = false;
+    // Auto refresh - poll the server at the selected interval (seconds, "0" = disabled)
+    // & reload the file only when it has changed, keeping the current search, sort & page
+    let autoRefreshTimer = null;
+    let autoRefreshInProgress = false;
 
-    // SignalR connection
-    // To be notified from the FileSystemWatcher changes
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl("http://localhost:45678/log")
-        .build();
+    const autoRefresh = () => {
+        if (!vm.fileOpen || vm.isLoading || autoRefreshInProgress) {
+            return;
+        }
 
-    // Start signalR connection
-    connection
-        .start()
-        .catch((err) => {
-            console.error(err);
-        });
+        autoRefreshInProgress = true;
+        logViewerResource.hasFileChanged()
+            .then((response) => {
+                if (response.data !== true) {
+                    return;
+                }
 
-    // SignalR on server will send us this
-    // Once it knows about a file change with FileSystemWatcher
-    connection.on("NotifyNewLogEntries", () => {
-        vm.fileHasUpdates = true;
-        $scope.$applyAsync();
-        console.log('FILE UPDATED');
-    });
-
-    vm.reload = () => {
-        // Hide the message that notified user there was file updates
-        vm.fileHasUpdates = false;
-
-        // Reload the file - send a message to MAIN via IPC
-        ipcRenderer.send("logviewer.reload-file-after-notify");
+                return logViewerResource.reloadFile().then(() => {
+                    logViewerResource.getNumberOfErrors().then((errors) => {
+                        vm.errorCount = errors.data;
+                    });
+                    logViewerResource.getLogLevelCounts().then((totals) => {
+                        setLogTypes(totals.data);
+                    });
+                    vm.performSearch();
+                    loadPropertyNames();
+                });
+            })
+            .catch((err) => {
+                console.error("Auto refresh failed", err);
+            })
+            .finally(() => {
+                autoRefreshInProgress = false;
+            });
     };
+
+    $scope.$watch(() => vm.logOptions.autoRefresh, (seconds) => {
+        if (autoRefreshTimer) {
+            $interval.cancel(autoRefreshTimer);
+            autoRefreshTimer = null;
+        }
+
+        const intervalSeconds = Number(seconds);
+        if (intervalSeconds > 0) {
+            autoRefreshTimer = $interval(autoRefresh, intervalSeconds * 1000);
+        }
+    });
 
     vm.errorCountClick = () => {
         // When we click error count - Update filter expression & do NEW search
@@ -104,6 +129,7 @@ logViewerApp.controller("LogViewerController", ["$scope", "logViewerResource", f
 
     ipcRenderer.on("logviewer.file-opened", () => {
         vm.fileOpen = true;
+        loadPropertyNames();
         $scope.$applyAsync();
     });
 
@@ -114,11 +140,13 @@ logViewerApp.controller("LogViewerController", ["$scope", "logViewerResource", f
         vm.logTypes = {};
         vm.chartData = [];
         vm.logs = {};
+        vm.propertyNames = [];
 
         vm.logOptions = {};
         vm.logOptions.filterExpression = "";
         vm.logOptions.sortOrder = "Descending";
         vm.logOptions.pageNumber = 1;
+        vm.logOptions.autoRefresh = "0";
 
         $scope.$applyAsync();
     });
@@ -128,16 +156,20 @@ logViewerApp.controller("LogViewerController", ["$scope", "logViewerResource", f
         $scope.$applyAsync();
     });
 
-    ipcRenderer.on("logviewer.data-totals", (event:Electron.IpcRendererEvent, arg: any) => {
-        vm.logTypes = arg;
+    const setLogTypes = (totals) => {
+        vm.logTypes = totals;
         vm.chartData = [
-            arg.verbose,
-            arg.debug,
-            arg.information,
-            arg.warning,
-            arg.error,
-            arg.fatal,
+            totals.verbose,
+            totals.debug,
+            totals.information,
+            totals.warning,
+            totals.error,
+            totals.fatal,
         ];
+    };
+
+    ipcRenderer.on("logviewer.data-totals", (event:Electron.IpcRendererEvent, arg: any) => {
+        setLogTypes(arg);
         $scope.$applyAsync();
     });
 

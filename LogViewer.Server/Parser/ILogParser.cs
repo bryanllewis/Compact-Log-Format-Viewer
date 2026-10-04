@@ -13,6 +13,10 @@ namespace LogViewer.Server
 
         List<LogEvent> ReadLogs(string filePath, Logger? logger = null);
 
+        bool HasFileChanged();
+
+        List<string> PropertyNames();
+
         LogLevelCounts TotalCounts();
 
         int TotalErrors();

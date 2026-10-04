@@ -2,15 +2,19 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <PublishTrimmed>true</PublishTrimmed>
+        <!-- MVC & Newtonsoft.Json rely on reflection, so only trim assemblies that opt in (the .NET 7 default) -->
+        <TrimMode>partial</TrimMode>
+        <!-- PublishTrimmed turns this off by default, which breaks MVC controller discovery at startup -->
+        <MvcEnhancedModelMetadataSupport>true</MvcEnhancedModelMetadataSupport>
         <NoWarn>NU1603</NoWarn>
         <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
     </PropertyGroup>
 
     <PropertyGroup>
-		<AssemblyVersion>1.4.0</AssemblyVersion>
-		<FileVersion>1.4.0</FileVersion>
+		<AssemblyVersion>1.5.0</AssemblyVersion>
+		<FileVersion>1.5.0</FileVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -18,7 +22,7 @@
 	</PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.18" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.12" />
         <PackageReference Include="Serilog.Expressions" Version="4.0.0" />
         <PackageReference Include="Serilog.Formatting.Compact.Reader" Version="3.0.0" />
         <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />

@@ -1,7 +1,7 @@
 {
   "name": "logviewer.client",
-  "productName": "Compact Log Viewer",
-  "version": "1.4.0",
+  "productName": "Trimark Compact Log Viewer",
+  "version": "1.5.0",
   "description": "A cross platform Electron app to view and search logs stored in the Compact log format",
   "homepage": "https://github.com/warrenbuckley/Compact-Log-Format-Viewer#readme",
   "repository": {
@@ -16,8 +16,7 @@
     "tsc": "tsc --diagnostics",
     "watch": "tsc --watch",
     "win": "electron-builder --win --config ./electron-builder.json",
-    "mac": "electron-builder --mac --config electron-builder.json",
-    "publish": "electron-builder --config electron-builder.json --publish always"
+    "mac": "electron-builder --mac --config electron-builder.json"
   },
   "author": "Warren Buckley",
   "license": "ISC",
@@ -45,7 +44,6 @@
     "bootstrap": "^5.3.3",
     "chart.js": "2.9.4",
     "electron-log": "^5.1.2",
-    "electron-updater": "^6.1.8",
     "jquery": "^3.7.1",
     "popper.js": "^1.16.1"
   }

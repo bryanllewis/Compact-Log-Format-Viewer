@@ -9,7 +9,6 @@ on:
 env:
   BUILD_CONFIGURATION: 'Debug'
   DEBUG: 'electron-builder' #Used to set electron-builder in debug mode to give us more verbose details when packaing:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Electron Builder uses GH_TOKEN env variable
 
 jobs:
   ServerTests:
@@ -25,7 +24,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '7.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Run .NET test
         run: dotnet test
@@ -42,7 +41,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '7.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Make .NET Core Server excutable
         working-directory: LogViewer.Server
@@ -77,10 +76,6 @@ jobs:
         working-directory: LogViewer.Client
         run: npm run win
 
-      - name: Electron Builder Publish (Adds assets to draft release)
-        working-directory: LogViewer.Client
-        run: npm run publish
-
       - name: Upload Windows-Store.appx
         uses: actions/upload-artifact@v3
         with:
@@ -90,6 +85,6 @@ jobs:
       - name: Upload Installer Setup.exe
         uses: actions/upload-artifact@v3
         with:
-          name: Compact.Log.Viewer.Setup.exe
-          path: output/Compact.Log.Viewer.Setup.*.exe
+          name: Trimark.Compact.Log.Viewer.Setup.exe
+          path: output/Trimark.Compact.Log.Viewer.Setup.*.exe
 

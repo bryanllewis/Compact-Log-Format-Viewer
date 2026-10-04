@@ -91,6 +91,13 @@ log-items .properties th {
     vertical-align: top;
 }
 
+/* Tighter rows than the Bootstrap table default (0.5rem) so more properties fit */
+log-items .properties th,
+log-items .properties td {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
+
 .square {
     height:12px;
     width:12px;
@@ -122,9 +129,22 @@ log-items .properties th {
     background-color:#dc3545;
 }
 
-#file-update-message {
-    position: sticky;
-    z-index: 100;
-    width: 100%;
-    top: 0;
+/* Property name suggestions below the search box */
+.search-suggestions {
+    top: 100%;
+    left: 0;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+/* Property values in a log entry search for that value when clicked, looking like plain text until hovered */
+.property-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.property-link:hover {
+    color: var(--bs-link-hover-color);
+    text-decoration: underline;
+    cursor: pointer;
 }

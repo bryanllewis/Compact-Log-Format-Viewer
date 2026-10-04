@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
@@ -10,25 +11,29 @@ namespace LogViewer.Server
         static void Main(string[] args)
         {
             Console.WriteLine("Booting LogViewer.Server");
-            CreateWebHostBuilder(args).Build().Run();
+            CreateHostBuilder(args).Build().Run();
         }
 
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args)
+        public static IHostBuilder CreateHostBuilder(string[] args)
         {
-            // NOT using 'WebHost.CreateDefaultBuilder(args)'
+            // NOT using 'Host.CreateDefaultBuilder(args)' / 'WebHost.CreateDefaultBuilder(args)'
             // As this lives in the assembly/nuget 'Microsoft.AspNetCore'
             // Which means we reference way toooooo much & get the OpenSSL issue on MacOS for AppStore submissions
             // So manually copy over what we needed from the helper method :)
-            var webHostBuilder = new WebHostBuilder();
-            webHostBuilder
-                .UseKestrel((context, options) =>
+            var hostBuilder = new HostBuilder();
+            hostBuilder
+                .ConfigureWebHost(webHostBuilder =>
                 {
-                    options.Configure(context.Configuration.GetSection("Kestrel"));
-                })
-                .UseStartup<Startup>()
-                .ConfigureKestrel((context, options) =>
-                {
-                    options.Listen(IPAddress.Loopback, 45678);
+                    webHostBuilder
+                        .UseKestrel((context, options) =>
+                        {
+                            options.Configure(context.Configuration.GetSection("Kestrel"));
+                        })
+                        .UseStartup<Startup>()
+                        .ConfigureKestrel((context, options) =>
+                        {
+                            options.Listen(IPAddress.Loopback, 45678);
+                        });
                 })
                 .ConfigureLogging(logging =>
                 {
@@ -36,7 +41,7 @@ namespace LogViewer.Server
                     logging.AddConsole();
                 });
 
-            return webHostBuilder;
+            return hostBuilder;
         }
     }
 }

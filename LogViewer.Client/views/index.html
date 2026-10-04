@@ -2,7 +2,7 @@
 <html ng-app="logViewerApp">
   <head>
     <meta charset="UTF-8">
-    <title>Compact Log Viewer</title>
+    <title>Compact Log Viewer (Trimark Edition)</title>
 
     <!-- BootStrap Dist CSS -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css" />
@@ -26,15 +26,11 @@
       <!-- Log Is Open -->
       <div id="log-viewer" ng-show="vm.fileOpen">
 
-        <div id="file-update-message" class="alert alert-warning" ng-show="vm.fileHasUpdates">
-          File has updates <a href="#" class="alert-link" ng-click="vm.reload()">Reload file</a>
-        </div>
-
         <div class="container-fluid">
           <div class="row">
-            <div class="col-md-12">
+            <div class="col-md-12 py-1">
               <!-- Search Box -->
-              <log-search log-options="vm.logOptions" on-perform-search="vm.performSearch()"></log-search>
+              <log-search log-options="vm.logOptions" property-names="vm.propertyNames" on-perform-search="vm.performSearch()"></log-search>
             </div>
           </div>
 
@@ -51,9 +47,6 @@
               </div>
 
               <div class="col-md-4">
-                <!-- Error Count -->
-                <error-count errors="vm.errorCount" on-error-click="vm.errorCountClick()"></error-count>
-
                 <!-- Log Types -->
                 <log-types logtypes="vm.logTypes" chartdata="vm.chartData" chartlabels="vm.chartLabels" chartcolors="vm.chartColors" on-log-type-click="vm.logTypeClick(logtype)"></log-types>
 
@@ -61,9 +54,7 @@
                 <message-templates templates="vm.messageTemplates" on-template-click="vm.messageTemplateClick(template)"></message-templates>
               </div>
           </div>
-
         </div>
-
       </div>
     </div>
 
@@ -77,7 +68,6 @@
 
       require('../dist/renderer/components/dropzone.js');
       require('../dist/renderer/components/loader.js');
-      require('../dist/renderer/components/errorcount.js');
       require('../dist/renderer/components/messagetemplates.js');
       require('../dist/renderer/components/logtypes.js');
       require('../dist/renderer/components/logitems.js');
