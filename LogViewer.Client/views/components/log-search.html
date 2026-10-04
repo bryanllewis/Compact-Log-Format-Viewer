@@ -1,22 +1,23 @@
 <div class="card mb-4">
     <div class="card-body">
+		<select ng-model="vm.logOptions.sortOrder" ng-change="vm.search(vm.logOptions)" class="custom-select custom-select-lg float-end" style="width: auto;">
+			<option value="Ascending">Sort: Ascending</option>
+			<option value="Descending">Sort: Descending</option>
+		</select>
+		<select ng-model="vm.logOptions.autoRefresh" class="custom-select custom-select-lg float-end me-2" style="width: auto;" title="Reload the log file at this interval when it has changed">
+			<option value="0">Refresh: Disabled</option>
+			<option value="3">Refresh: 3 seconds</option>
+			<option value="5">Refresh: 5 seconds</option>
+			<option value="10">Refresh: 10 seconds</option>
+			<option value="30">Refresh: 30 seconds</option>
+		</select>
         <h5 class="card-title">Logs</h5>
-        <div class="input-group mb-3">
-            <input type="text" ng-model="vm.logOptions.filterExpression" class="form-control form-control-lg" placeholder="Search logs&hellip;"/>
+        <div class="input-group">
+            <input type="text" ng-model="vm.logOptions.filterExpression" ng-keydown="$event.key === 'Enter' && vm.search(vm.logOptions)" class="form-control form-control-lg" placeholder="Search logs&hellip;"/>
             <div class="input-group-append">
+                <button class="btn btn-primary ms-1" type="button" ng-click="vm.search(vm.logOptions)">Search</button>
                 <button class="btn btn-outline-secondary" type="button" ng-click="vm.clear(vm.logOptions)">Clear</button>
-                <button class="btn btn-primary" type="button" ng-click="vm.search(vm.logOptions)">Search</button>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-md-4 offset-md-8">
-                <select ng-model="vm.logOptions.sortOrder" ng-change="vm.search(vm.logOptions)" class="custom-select custom-select-lg">
-                    <option value="Ascending">Ascending</option>
-                    <option value="Descending">Descending</option>
-                </select>
-            </div>
-        </div>
-
     </div>
 </div>

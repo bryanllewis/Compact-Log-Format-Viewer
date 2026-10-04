@@ -13,6 +13,14 @@ function logViewerResource($http: IHttpService) {
             return $http.get(`${serverApiDomain}/totals`);
         },
 
+        hasFileChanged() {
+            return $http.get(`${serverApiDomain}/haschanged`);
+        },
+
+        reloadFile() {
+            return $http.get(`${serverApiDomain}/reload`);
+        },
+
         getLogs: (options) => {
 
             const defaults = {

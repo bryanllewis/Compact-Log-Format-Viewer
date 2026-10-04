@@ -44,7 +44,7 @@ jobs:
         command: publish
         publishWebProjects: false
         configuration: $(buildConfiguration)
-        arguments: '--runtime win10-x64 --output bin/dist/win /p:TrimUnusedDependencies=true'
+        arguments: '--runtime win-x64 --output bin/dist/win /p:TrimUnusedDependencies=true'
         zipAfterPublish: false
         modifyOutputPath: false
         workingDirectory: LogViewer.Server

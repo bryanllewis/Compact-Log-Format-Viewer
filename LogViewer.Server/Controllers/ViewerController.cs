@@ -70,6 +70,12 @@ namespace LogViewer.Server.Controllers
             return Ok();
         }
 
+        [HttpGet("haschanged")]
+        public ActionResult<bool> HasChanged()
+        {
+            return _logParser.HasFileChanged();
+        }
+
         [HttpGet("totals")]
         public ActionResult<LogLevelCounts> TotalCounts()
         {

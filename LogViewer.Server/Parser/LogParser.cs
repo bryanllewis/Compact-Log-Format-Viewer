@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using LogViewer.Server.Extensions;
 using LogViewer.Server.Hubs;
 using LogViewer.Server.Models;
@@ -24,6 +25,10 @@ namespace LogViewer.Server
         public bool LogIsOpen { get; set; }
         public FileSystemWatcher FileWatcher { get; }
 
+        // File size & last write time when the log was last read, used to detect changes
+        private long _lastReadLength;
+        private DateTime _lastReadWriteTimeUtc;
+
         private const string ExpressionOperators = "()+=*<>%-";
 
         public LogParser(IHubContext<LogHub> hubContext)
@@ -35,6 +40,12 @@ namespace LogViewer.Server
             LogIsOpen = false;
 
             FileWatcher = new FileSystemWatcher();
+            FileWatcher.Changed += (sender, args) =>
+            {
+                // Notify user that new entries has occured
+                // We don't pass back the new log lines, but rather just notify the client that new lines has been added
+                _hubContext.Clients.All.SendAsync("NotifyNewLogEntries");
+            };
         }
         
         public List<LogEvent> ReadLogs(string filePath, Logger? logger = null)
@@ -43,6 +54,9 @@ namespace LogViewer.Server
 
             using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
+                _lastReadLength = fs.Length;
+                _lastReadWriteTimeUtc = File.GetLastWriteTimeUtc(filePath);
+
                 using (var stream = new StreamReader(fs))
                 {
                     using (var reader = new LogEventReader(stream))
@@ -73,16 +87,21 @@ namespace LogViewer.Server
             FileWatcher.Filter = Path.GetFileName(LogFilePath);
             FileWatcher.EnableRaisingEvents = true;
 
-
-            FileWatcher.Changed += async (sender, args) =>
-            {
-                // Notify user that new entries has occured
-                // We don't pass back the new log lines, but rather just notify the client that new lines has been added
-                //await Clients.All.SendAsync("NotifyNewLogEntries");
-                _hubContext.Clients.All.SendAsync("NotifyNewLogEntries");
-            };
-
             return _logItems;
+        }
+
+        public bool HasFileChanged()
+        {
+            if (LogIsOpen == false || File.Exists(LogFilePath) == false)
+                return false;
+
+            // Read the length from an open handle, as the size Windows reports for a file
+            // another process is still appending to (such as a Serilog file sink) can be stale
+            using (var fs = new FileStream(LogFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                return fs.Length != _lastReadLength
+                    || File.GetLastWriteTimeUtc(LogFilePath) != _lastReadWriteTimeUtc;
+            }
         }
 
         public LogLevelCounts TotalCounts()
@@ -139,7 +158,7 @@ namespace LogViewer.Server
                         MessageTemplateText = x.MessageTemplate.Text,
                         Exception = x.Exception?.ToString(),
                         Properties = x.Properties,
-                        RenderedMessage = x.RenderMessage()
+                        RenderedMessage = x.RenderMessageUnquoted()
                     });
 
                 return new LogResults()
@@ -175,7 +194,10 @@ namespace LogViewer.Server
             {
                 // Check if it's a valid expression
                 // If the expression evaluates then make it into a filter
-                if (SerilogExpression.TryCompile(filterExpression, null, customSerilogFunctions, out var compiled, out var error))
+                // Serilog expressions only support 'single quoted' strings, so if it doesn't compile
+                // try again with any "double quoted" strings swapped over, e.g. RequestMethod="POST"
+                if (SerilogExpression.TryCompile(filterExpression, null, customSerilogFunctions, out var compiled, out var error)
+                    || SerilogExpression.TryCompile(ConvertDoubleQuotedStrings(filterExpression), null, customSerilogFunctions, out compiled, out error))
                 {
                     // `compiled` is a function that can be executed against `LogEvent`s:
                     filter = evt =>
@@ -208,7 +230,7 @@ namespace LogViewer.Server
                         MessageTemplateText = x.MessageTemplate.Text,
                         Exception = x.Exception?.ToString(),
                         Properties = x.Properties,
-                        RenderedMessage = x.RenderMessage()
+                        RenderedMessage = x.RenderMessageUnquoted()
                     });
 
             return new LogResults()
@@ -233,6 +255,63 @@ namespace LogViewer.Server
                 .OrderByDescending(x => x.Count);
 
             return templates.ToList();
+        }
+
+        /// <summary>
+        /// Converts "double quoted" string literals into the 'single quoted' form Serilog expressions require,
+        /// leaving any existing 'single quoted' strings untouched
+        /// </summary>
+        private static string ConvertDoubleQuotedStrings(string filterExpression)
+        {
+            var result = new StringBuilder(filterExpression.Length);
+            var inSingleQuotes = false;
+
+            for (var i = 0; i < filterExpression.Length; i++)
+            {
+                var c = filterExpression[i];
+
+                if (c == '\'')
+                {
+                    inSingleQuotes = !inSingleQuotes;
+                    result.Append(c);
+                }
+                else if (c == '"' && inSingleQuotes == false)
+                {
+                    // Find the closing double quote, a doubled "" is an escaped quote inside the string
+                    var literal = new StringBuilder();
+                    var closed = false;
+
+                    for (i++; i < filterExpression.Length; i++)
+                    {
+                        if (filterExpression[i] == '"')
+                        {
+                            if (i + 1 < filterExpression.Length && filterExpression[i + 1] == '"')
+                            {
+                                literal.Append('"');
+                                i++;
+                                continue;
+                            }
+
+                            closed = true;
+                            break;
+                        }
+
+                        literal.Append(filterExpression[i]);
+                    }
+
+                    // Unterminated string - leave the expression as it was
+                    if (closed == false)
+                        return filterExpression;
+
+                    result.Append('\'').Append(literal.Replace("'", "''")).Append('\'');
+                }
+                else
+                {
+                    result.Append(c);
+                }
+            }
+
+            return result.ToString();
         }
 
         private Func<LogEvent, bool>? PerformMessageLikeFilter(string filterExpression)
